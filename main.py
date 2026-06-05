@@ -5,14 +5,73 @@ print("ROBOT INICIADO")
 
 modo_seguro = False
 ultimo_comando = None
+sensores_activos = True
 
 VELOCIDAD_AVANCE = 55
 VELOCIDAD_GIRO = 45
+
+DISTANCIA_MINIMA_FRONTAL = 20
 
 vel_motor_frontal_izq = 0
 vel_motor_frontal_der = 0
 vel_motor_trasero_izq = 0
 vel_motor_trasero_der = 0
+
+def leer_distancia_frontal():
+
+    if not sensores_activos:
+        return None
+
+    try:
+        distancia = detector_us.get_distance()
+
+        if distancia <= 0:
+            return None
+
+        return distancia
+
+    except:
+        return None
+
+def obstaculo_frontal():
+
+    if not sensores_activos:
+        return False
+
+    distancia = leer_distancia_frontal()
+
+    if distancia is None:
+        return False
+
+    if distancia <= DISTANCIA_MINIMA_FRONTAL:
+
+        print("OBSTACULO FRONTAL:", distancia, "cm")
+
+        return True
+
+    return False
+
+def obstaculo_izquierda():
+
+    if not sensores_activos:
+        return False
+
+    try:
+        return detector_ir_izq.read()
+
+    except:
+        return False
+
+def obstaculo_derecha():
+
+    if not sensores_activos:
+        return False
+
+    try:
+        return detector_ir_der.read()
+
+    except:
+        return False
 
 def ajustar_motores(
     motor_frontal_izq_vel,
@@ -44,22 +103,22 @@ def ajustar_motores(
     for paso in range(1, pasos + 1):
 
         vel_motor_frontal_izq = int(
-            inicio_frontal_izq + 
+            inicio_frontal_izq +
             (motor_frontal_izq_vel - inicio_frontal_izq) * paso / pasos
         )
 
         vel_motor_frontal_der = int(
-            inicio_frontal_der + 
+            inicio_frontal_der +
             (motor_frontal_der_vel - inicio_frontal_der) * paso / pasos
         )
 
         vel_motor_trasero_izq = int(
-            inicio_trasero_izq + 
+            inicio_trasero_izq +
             (motor_trasero_izq_vel - inicio_trasero_izq) * paso / pasos
         )
 
         vel_motor_trasero_der = int(
-            inicio_trasero_der + 
+            inicio_trasero_der +
             (motor_trasero_der_vel - inicio_trasero_der) * paso / pasos
         )
 
@@ -76,6 +135,12 @@ def ajustar_motores(
     vel_motor_trasero_der = motor_trasero_der_vel
 
 def avanzar():
+
+    if obstaculo_frontal():
+
+        detener()
+        print("AVANCE BLOQUEADO POR SENSOR US")
+        return
 
     ajustar_motores(
         motor_frontal_izq_vel=VELOCIDAD_AVANCE,
@@ -95,6 +160,12 @@ def retroceder():
 
 def girar_izquierda():
 
+    if obstaculo_izquierda():
+
+        detener()
+        print("GIRO IZQUIERDA BLOQUEADO POR IR IZQUIERDO")
+        return
+
     ajustar_motores(
         motor_frontal_izq_vel=-VELOCIDAD_GIRO,
         motor_frontal_der_vel=-VELOCIDAD_GIRO,
@@ -103,6 +174,12 @@ def girar_izquierda():
     )
 
 def girar_derecha():
+
+    if obstaculo_derecha():
+
+        detener()
+        print("GIRO DERECHA BLOQUEADO POR IR DERECHO")
+        return
 
     ajustar_motores(
         motor_frontal_izq_vel=VELOCIDAD_GIRO,
@@ -127,10 +204,21 @@ def detener():
 
 def ejecutar_comando(command):
 
+    global sensores_activos
+
     if command == "a":
 
         detener()
         return "modo_seguro"
+
+    elif command == "b":
+
+        sensores_activos = not sensores_activos
+
+        if sensores_activos:
+            print("SENSORES ACTIVADOS")
+        else:
+            print("SENSORES DESACTIVADOS")
 
     elif command == "up":
 
@@ -158,11 +246,13 @@ while True:
 
     command = control.read_command()
 
-    if command is not None and command != ultimo_comando:
+    if command is not None:
 
-        print("Comando recibido:", command)
+        if command != ultimo_comando:
 
-        ultimo_comando = command
+            print("Comando recibido:", command)
+
+            ultimo_comando = command
 
         estado = ejecutar_comando(command)
 
