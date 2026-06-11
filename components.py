@@ -42,28 +42,6 @@ motor_trasero_izq = Servo(
     SERVO_BL_PIN,
     continuous=True
 )
-
-# -------------------------
-# Sensor ultrasónico frontal
-# -------------------------
-
-detector_us = Ultrasound(
-    US_TRIGGER_PIN,
-    US_ECHO_PIN
-)
-
-# -------------------------
-# Sensores infrarrojos laterales
-# -------------------------
-
-detector_ir_izq = Infrared(
-    IR_IZQ_PIN
-)
-
-detector_ir_der = Infrared(
-    IR_DER_PIN
-)
-
 # -------------------------
 # Control remoto WalkerBot
 # -------------------------
