@@ -5,73 +5,32 @@ print("ROBOT INICIADO")
 
 modo_seguro = False
 ultimo_comando = None
-sensores_activos = True
+modo_turbo = False
 
-VELOCIDAD_AVANCE = 55
-VELOCIDAD_GIRO = 45
+VELOCIDAD_AVANCE_NORMAL = 55
+VELOCIDAD_GIRO_NORMAL = 45
 
-DISTANCIA_MINIMA_FRONTAL = 20
+VELOCIDAD_AVANCE_TURBO = 80
+VELOCIDAD_GIRO_TURBO = 65
 
 vel_motor_frontal_izq = 0
 vel_motor_frontal_der = 0
 vel_motor_trasero_izq = 0
 vel_motor_trasero_der = 0
 
-def leer_distancia_frontal():
+def obtener_velocidad_avance():
 
-    if not sensores_activos:
-        return None
+    if modo_turbo:
+        return VELOCIDAD_AVANCE_TURBO
 
-    try:
-        distancia = detector_us.get_distance()
+    return VELOCIDAD_AVANCE_NORMAL
 
-        if distancia <= 0:
-            return None
+def obtener_velocidad_giro():
 
-        return distancia
+    if modo_turbo:
+        return VELOCIDAD_GIRO_TURBO
 
-    except:
-        return None
-
-def obstaculo_frontal():
-
-    if not sensores_activos:
-        return False
-
-    distancia = leer_distancia_frontal()
-
-    if distancia is None:
-        return False
-
-    if distancia <= DISTANCIA_MINIMA_FRONTAL:
-
-        print("OBSTACULO FRONTAL:", distancia, "cm")
-
-        return True
-
-    return False
-
-def obstaculo_izquierda():
-
-    if not sensores_activos:
-        return False
-
-    try:
-        return detector_ir_izq.read()
-
-    except:
-        return False
-
-def obstaculo_derecha():
-
-    if not sensores_activos:
-        return False
-
-    try:
-        return detector_ir_der.read()
-
-    except:
-        return False
+    return VELOCIDAD_GIRO_NORMAL
 
 def ajustar_motores(
     motor_frontal_izq_vel,
@@ -136,56 +95,46 @@ def ajustar_motores(
 
 def avanzar():
 
-    if obstaculo_frontal():
-
-        detener()
-        print("AVANCE BLOQUEADO POR SENSOR US")
-        return
+    velocidad = obtener_velocidad_avance()
 
     ajustar_motores(
-        motor_frontal_izq_vel=VELOCIDAD_AVANCE,
-        motor_frontal_der_vel=-VELOCIDAD_AVANCE,
-        motor_trasero_izq_vel=VELOCIDAD_AVANCE,
-        motor_trasero_der_vel=-VELOCIDAD_AVANCE
+        motor_frontal_izq_vel=velocidad,
+        motor_frontal_der_vel=-velocidad,
+        motor_trasero_izq_vel=velocidad,
+        motor_trasero_der_vel=-velocidad
     )
 
 def retroceder():
 
+    velocidad = obtener_velocidad_avance()
+
     ajustar_motores(
-        motor_frontal_izq_vel=-VELOCIDAD_AVANCE,
-        motor_frontal_der_vel=VELOCIDAD_AVANCE,
-        motor_trasero_izq_vel=-VELOCIDAD_AVANCE,
-        motor_trasero_der_vel=VELOCIDAD_AVANCE
+        motor_frontal_izq_vel=-velocidad,
+        motor_frontal_der_vel=velocidad,
+        motor_trasero_izq_vel=-velocidad,
+        motor_trasero_der_vel=velocidad
     )
 
 def girar_izquierda():
 
-    if obstaculo_izquierda():
-
-        detener()
-        print("GIRO IZQUIERDA BLOQUEADO POR IR IZQUIERDO")
-        return
+    velocidad = obtener_velocidad_giro()
 
     ajustar_motores(
-        motor_frontal_izq_vel=-VELOCIDAD_GIRO,
-        motor_frontal_der_vel=-VELOCIDAD_GIRO,
-        motor_trasero_izq_vel=-VELOCIDAD_GIRO,
-        motor_trasero_der_vel=-VELOCIDAD_GIRO
+        motor_frontal_izq_vel=-velocidad,
+        motor_frontal_der_vel=-velocidad,
+        motor_trasero_izq_vel=-velocidad,
+        motor_trasero_der_vel=-velocidad
     )
 
 def girar_derecha():
 
-    if obstaculo_derecha():
-
-        detener()
-        print("GIRO DERECHA BLOQUEADO POR IR DERECHO")
-        return
+    velocidad = obtener_velocidad_giro()
 
     ajustar_motores(
-        motor_frontal_izq_vel=VELOCIDAD_GIRO,
-        motor_frontal_der_vel=VELOCIDAD_GIRO,
-        motor_trasero_izq_vel=VELOCIDAD_GIRO,
-        motor_trasero_der_vel=VELOCIDAD_GIRO
+        motor_frontal_izq_vel=velocidad,
+        motor_frontal_der_vel=velocidad,
+        motor_trasero_izq_vel=velocidad,
+        motor_trasero_der_vel=velocidad
     )
 
 def detener():
@@ -204,21 +153,32 @@ def detener():
 
 def ejecutar_comando(command):
 
-    global sensores_activos
+    global modo_seguro
+    global modo_turbo
+
+    if modo_seguro:
+
+        detener()
+        return
 
     if command == "a":
 
         detener()
-        return "modo_seguro"
+        modo_seguro = True
+
+        print("MODO SEGURO ACTIVADO")
+        print("Robot detenido completamente")
 
     elif command == "b":
 
-        sensores_activos = not sensores_activos
+        modo_turbo = not modo_turbo
 
-        if sensores_activos:
-            print("SENSORES ACTIVADOS")
+        if modo_turbo:
+            print("MODO TURBO ACTIVADO")
         else:
-            print("SENSORES DESACTIVADOS")
+            print("MODO TURBO DESACTIVADO")
+
+        detener()
 
     elif command == "up":
 
@@ -240,11 +200,15 @@ def ejecutar_comando(command):
 
         detener()
 
-    return "normal"
-
 while True:
 
     command = control.read_command()
+
+    if modo_seguro:
+
+        detener()
+        time.sleep(1)
+        continue
 
     if command is not None:
 
@@ -254,21 +218,6 @@ while True:
 
             ultimo_comando = command
 
-        estado = ejecutar_comando(command)
-
-        if estado == "modo_seguro":
-
-            modo_seguro = True
-
-            print("MODO SEGURO ACTIVADO")
-            print("main.py detenido")
-
-            break
+        ejecutar_comando(command)
 
     time.sleep(0.05)
-
-detener()
-
-while modo_seguro:
-
-    time.sleep(1)
